@@ -680,6 +680,77 @@
                 }
             });
         });
+        const SHEET_URL = "https://script.google.com/macros/s/AKfycbzhiPo6HPEKQuKMVN9YJc7vdwFTakF7QwpVQD6eWGKj6_F5m1oDKdAsoHz3kZp5281rvQ/exec";
+async function renderTrackerView() {
+    const content = document.getElementById('main-content');
+    content.innerHTML = `
+    <div class="bg-white p-6 rounded-2xl shadow-lg">
+      <div class="text-center mb-6">
+        <h2 class="text-3xl font-bold text-gray-800">Daily Tracking Sheet 📝</h2>
+        <p class="text-gray-500">Ye data Google Sheet me save hota hai aur wahin se load hota hai.</p>
+      </div>
+      <div class="overflow-x-auto mb-6">
+        <table class="tracker-table w-full border-collapse rounded-lg overflow-hidden shadow-md">
+          <thead>
+            <tr class="bg-gray-100">
+              <th class="py-3 px-4">Date</th>
+              <th class="py-3 px-4">Class Work (CW) ✔️</th>
+              <th class="py-3 px-4">Home Work (HW) ✔️</th>
+              <th class="py-3 px-4">Test Work (TW) ✔️</th>
+              <th class="py-3 px-4">Kya Seekha? 😊</th>
+              <th class="py-3 px-4">Teacher's Tick (✓)</th>
+            </tr>
+          </thead>
+          <tbody id="trackerBody"></tbody>
+        </table>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <input id="date" type="text" placeholder="Date" class="p-3 border rounded-lg w-full">
+        <input id="cw" type="text" placeholder="Class Work" class="p-3 border rounded-lg w-full">
+        <input id="hw" type="text" placeholder="Home Work" class="p-3 border rounded-lg w-full">
+        <input id="tw" type="text" placeholder="Test Work" class="p-3 border rounded-lg w-full">
+        <input id="kyaSeekha" type="text" placeholder="Kya Seekha?" class="p-3 border rounded-lg w-full">
+        <input id="tick" type="text" placeholder="Teacher's Tick" class="p-3 border rounded-lg w-full">
+        <button onclick="addRow()" class="bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 transition">Save</button>
+      </div>
+    </div>`;
+    await loadTrackerData();
+}
+async function loadTrackerData() {
+    const res = await fetch(SHEET_URL);
+    const data = await res.json();
+    const tbody = document.getElementById('trackerBody');
+    tbody.innerHTML = '';
+    data.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="py-2 px-4">${row.date}</td>
+          <td class="py-2 px-4">${row.cw}</td>
+          <td class="py-2 px-4">${row.hw}</td>
+          <td class="py-2 px-4">${row.tw}</td>
+          <td class="py-2 px-4">${row.kyaSeekha}</td>
+          <td class="py-2 px-4">${row.tick}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+async function addRow() {
+    const data = {
+        date: document.getElementById('date').value,
+        cw: document.getElementById('cw').value,
+        hw: document.getElementById('hw').value,
+        tw: document.getElementById('tw').value,
+        kyaSeekha: document.getElementById('kyaSeekha').value,
+        tick: document.getElementById('tick').value
+    };
+    await fetch(SHEET_URL, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+    });
+    await loadTrackerData();
+    ['date','cw','hw','tw','kyaSeekha','tick'].forEach(id => document.getElementById(id).value = '');
+}
+document.addEventListener('DOMContentLoaded', renderTrackerView);
     </script>
 </body>
 </html>
