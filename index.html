@@ -13,12 +13,15 @@
     - Rhymes: Report ki rhyme list -> Goal: Inform -> Viz: Two-column card layout -> Interaction: N/A -> Justification: Rhymes ko English aur Hindi mein alag alag dikhata hai.
     - Flashcards: Report ke flashcard topics -> Goal: Organize -> Viz: Tabbed interface -> Interaction: JS-powered tab switching -> Justification: Phonics, Colours, GK ko alag tabs mein neatly categorize karta hai.
     - Questions: Report ka question bank -> Goal: Inform -> Viz: Accordion UI -> Interaction: Click to expand/collapse categories -> Justification: Users ko specific topics par focus karne deta hai.
-    - Daily Tracker: Report ka daily tracking sheet structure -> Goal: Track/Record -> Viz: HTML Table with example rows -> Interaction: N/A (print/manual fill ke liye) -> Justification: User ki request ke mutabik ek register-like format deta hai.
+    - Daily Tracker: Report ka daily tracking sheet structure -> Goal: Track/Record -> Viz: HTML Table with input fields and save button -> Interaction: Data entry and saving to Google Sheet via Apps Script -> Justification: User ki request ke mutabik ek register-like format deta hai aur data persistence provide karta hai.
     - Teacher's Lines: Report ke teacher ke liye simple lines -> Goal: Inform -> Viz: Accordion UI -> Interaction: Click to expand/collapse categories -> Justification: Teachers ko alag alag subjects ke liye ready-to-use lines provide karta hai.
     -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #FEFBF6; }
+        body { 
+            font-family: 'Inter', sans-serif; /* Using Inter font */
+            background-color: #FEFBF6; /* Lighter background */
+        }
         .nav-button { transition: all 0.3s ease; }
         .nav-button.active { background-color: #A6D0DD; color: #333; font-weight: 600; }
         .month-button.active { background-color: #7F5283; color: white; }
@@ -30,8 +33,74 @@
         .chart-container { position: relative; width: 100%; max-width: 600px; margin: 2rem auto; height: 300px; max-height: 400px; }
         @media (min-width: 768px) { .chart-container { height: 350px; } }
         .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
-        .tracker-table th, .tracker-table td { padding: 0.75rem; border: 1px solid #e2e8f0; text-align: left; }
-        .tracker-table th { background-color: #f8fafc; font-weight: 600; }
+        
+        /* New Tracker Styles from user's snippet */
+        .tracker-table {
+            border-collapse: collapse; /* Collapse borders for a cleaner look */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+            border-radius: 0.5rem; /* Rounded corners for the table */
+            overflow: hidden; /* Ensures rounded corners apply to content */
+        }
+        .tracker-table th, .tracker-table td { 
+            padding: 1rem; /* More padding */
+            border: 1px solid #e5e7eb; 
+            text-align: left; /* Align text to left */
+        }
+        .tracker-table th { 
+            background: #e0e7ff; /* Lighter blue for headers */
+            color: #374151; /* Darker text for headers */
+            font-weight: 600; /* Semi-bold headers */
+        }
+        .tracker-table td {
+            background: #ffffff; /* White background for data rows */
+        }
+        .tracker-table tr:nth-child(even) td {
+            background: #f9fafb; /* Slightly different background for even rows */
+        }
+        input[type="text"], input[type="date"] {
+            border-radius: 0.5rem; /* Rounded corners for inputs */
+            border: 1px solid #d1d5db; /* Light gray border */
+            padding: 0.75rem 1rem; /* More padding */
+            transition: border-color 0.2s, box-shadow 0.2s; /* Smooth transitions */
+        }
+        input[type="text"]:focus, input[type="date"]:focus {
+            border-color: #6366f1; /* Blue border on focus */
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); /* Light blue shadow on focus */
+            outline: none; /* Remove default outline */
+        }
+        button {
+            border-radius: 0.5rem; /* Rounded corners for button */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+            transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s; /* Smooth transitions */
+        }
+        button:hover {
+            transform: translateY(-1px); /* Slight lift on hover */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* Enhanced shadow on hover */
+        }
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            display: none; /* Hidden by default */
+            text-align: center;
+            font-size: 1.1rem;
+            color: #333;
+        }
+        .message-box button {
+            margin-top: 15px;
+            padding: 8px 20px;
+            background-color: #6366f1;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -60,8 +129,36 @@
 
     </div>
 
+    <!-- Custom Message Box -->
+    <div id="messageBox" class="message-box">
+        <p id="messageText"></p>
+        <button onclick="hideMessageBox()">OK</button>
+    </div>
+
     <script>
-        // Data for Syllabus Plan (Saal Bhar Ka Syllabus Plan)
+        // Global Chart.js instance
+        let myChart; 
+
+        // Custom Message Box functions
+        /**
+         * Displays a custom message box instead of alert().
+         * @param {string} message The message to display.
+         */
+        function showMessageBox(message) {
+            const messageBox = document.getElementById('messageBox');
+            const messageText = document.getElementById('messageText');
+            messageText.textContent = message;
+            messageBox.style.display = 'block';
+        }
+
+        /**
+         * Hides the custom message box.
+         */
+        function hideMessageBox() {
+            document.getElementById('messageBox').style.display = 'none';
+        }
+
+        // Data for Syllabus Plan (Saal Bhar Ka Syllabus Plan) - You can edit this data directly
         const syllabusData = {
             April: [
                 { week: 1, english: 'Capital A (Oral & Recognition)', maths: '1-5 (Oral)', hindi: 'अ (Recognition & Oral)', gk: 'Myself (Mera Naam, Mai Ladka/Ladki)' },
@@ -88,20 +185,20 @@
                 { week: 4, english: 'Capital E, F (Writing)', maths: 'Counting Objects (1-5)', hindi: 'उ, ऊ (Writing)', gk: 'Wild Animals (Elephant, Monkey)' },
             ],
             August: [
-                { week: 1, english: 'Capital G, H (Writing)', maths: 'Big-Small Concept', hindi: 'ऋ, ए (Writing)', gk: 'Flowers (Rose, Lotus)' },
-                { week: 2, english: 'Capital I, J (Writing)', maths: 'Tall-Short Concept', hindi: 'ऐ, ओ (Writing)', gk: 'Flowers (Sunflower, Lily)' },
-                { week: 3, english: 'Capital K, L (Writing)', maths: 'More-Less Concept', hindi: 'औ, अं (Writing)', gk: 'Trees (Mango Tree, Banyan Tree)' },
-                { week: 4, english: 'Capital M, N (Writing)', maths: 'Heavy-Light Concept', hindi: 'अः (Writing)', gk: 'Revision: Animals, Flowers, Trees' },
+                { week: 1, english: 'G, H (Writing)', maths: 'Big-Small Concept', hindi: 'ऋ, ए (Writing)', gk: 'Flowers (Rose, Lotus)' },
+                { week: 2, english: 'I, J (Writing)', maths: 'Tall-Short Concept', hindi: 'ऐ, ओ (Writing)', gk: 'Flowers (Sunflower, Lily)' },
+                { week: 3, english: 'K, L (Writing)', maths: 'More-Less Concept', hindi: 'औ, अं (Writing)', gk: 'Trees (Mango Tree, Banyan Tree)' },
+                { week: 4, english: 'M, N (Writing)', maths: 'Heavy-Light Concept', hindi: 'अः (Writing)', gk: 'Revision: Animals, Flowers, Trees' },
             ],
             September: [
-                { week: 1, english: 'Capital O, P (Writing)', maths: 'Up-Down Concept', hindi: 'अ-अः (Writing Practice)', gk: 'Seasons (Summer, Winter)' },
-                { week: 2, english: 'Capital Q, R (Writing)', maths: 'Full-Empty Concept', hindi: 'दो अक्षर के शब्द (Oral)', gk: 'Seasons (Rainy, Spring)' },
-                { week: 3, english: 'Capital S, T (Writing)', maths: 'Shapes: Circle, Square', hindi: 'दो अक्षर के शब्द (Writing)', gk: 'Things from Plants (Wood, Paper)' },
-                { week: 4, english: 'Capital U, V (Writing)', maths: 'Shapes: Triangle, Rectangle', hindi: 'दो अक्षर के शब्द (Writing)', gk: 'Things from Plants (Fruits, Vegetables)' },
+                { week: 1, english: 'O, P (Writing)', maths: 'Up-Down Concept', hindi: 'अ-अः (Writing Practice)', gk: 'Seasons (Summer, Winter)' },
+                { week: 2, english: 'Q, R (Writing)', maths: 'Full-Empty Concept', hindi: 'दो अक्षर के शब्द (Oral)', gk: 'Seasons (Rainy, Spring)' },
+                { week: 3, english: 'S, T (Writing)', maths: 'Shapes: Circle, Square', hindi: 'दो अक्षर के शब्द (Writing)', gk: 'Things from Plants (Wood, Paper)' },
+                { week: 4, english: 'U, V (Writing)', maths: 'Shapes: Triangle, Rectangle', hindi: 'दो अक्षर के शब्द (Writing)', gk: 'Things from Plants (Fruits, Vegetables)' },
             ],
             October: [
-                { week: 1, english: 'Capital W, X (Writing)', maths: '1-15 (Writing)', hindi: 'तीन अक्षर के शब्द (Oral)', gk: 'Magic Words (Please, Thank You)' },
-                { week: 2, english: 'Capital Y, Z (Writing)', maths: 'Counting Objects (1-10)', hindi: 'तीन अक्षर के शब्द (Writing)', gk: 'Magic Words (Sorry, Excuse Me)' },
+                { week: 1, english: 'W, X (Writing)', maths: '1-15 (Writing)', hindi: 'तीन अक्षर के शब्द (Oral)', gk: 'Magic Words (Please, Thank You)' },
+                { week: 2, english: 'Y, Z (Writing)', maths: 'Counting Objects (1-10)', hindi: 'तीन अक्षर के शब्द (Writing)', gk: 'Magic Words (Sorry, Excuse Me)' },
                 { week: 3, english: 'Small a, b (Recognition)', maths: '1-50 (Oral)', hindi: 'छोटी हिंदी कविता (Oral)', gk: 'Transport (Car, Bus)' },
                 { week: 4, english: 'Small c, d (Recognition)', maths: '1-50 (Oral)', hindi: 'छोटी हिंदी कविता (Oral)', gk: 'Transport (Train, Aeroplane)' },
             ],
@@ -137,7 +234,7 @@
             ],
         };
 
-        // Data for Weekly Oral Test & Rhymes List
+        // Data for Weekly Oral Test & Rhymes List - You can edit this data directly
         const oralTestTopics = {
             english: [
                 'Alphabet recognition (A-Z Capital/Small jo sikhaya)',
@@ -164,12 +261,12 @@
                 'Twinkle Twinkle Little Star ✨',
                 'Baa Baa Black Sheep 🐑',
                 'Johnny Johnny Yes Papa 🍬',
-                'Humpty Dumpty �',
+                'Humpty Dumpty 🥚',
                 'Jack and Jill 🏞️',
                 'Rain Rain Go Away ☔',
                 'ABCD Song 🎵',
                 'If You\'re Happy and You Know It 👏',
-                'One Two Buckle My Shoe 👟',
+                'One Two Buckle My Shoe �',
                 'Head Shoulders Knees and Toes 🧍'
             ],
             hindi: [
@@ -186,7 +283,7 @@
             ]
         };
 
-        // Data for Phonics + Colours + GK Flashcard Summary
+        // Data for Phonics + Colours + GK Flashcard Summary - You can edit this data directly
         const flashcardsData = {
             phonics: [
                 'A - /a/ (as in Apple) 🍎',
@@ -239,7 +336,7 @@
             ]
         };
 
-        // Data for Simple Oral Question Bank
+        // Data for Simple Oral Question Bank - You can edit this data directly
         const questionsData = {
             'Myself / Body Parts': [
                 'Beta, aapka naam kya hai? 😊',
@@ -272,7 +369,7 @@
             ]
         };
 
-        // Data for Teacher's Simple Lines
+        // Data for Teacher's Simple Lines - You can edit this data directly
         const teacherLinesData = {
             'English': [
                 '"Beta, ye Capital A hai. Bolo, A for Apple. Kya apple red hai?" 🍎',
@@ -301,13 +398,11 @@
             ]
         };
 
-        // Data for Daily Tracking Sheet (Example Rows)
-        const trackerExampleRows = [
-            { date: 'DD/MM/YY', cw: 'English: A writing', hw: 'Maths: 1-5 oral', tw: 'GK: My Body Parts', kyaSeekha: 'Naya Akshar \'A\' aur Body Parts ke naam!'},
-            { date: 'DD/MM/YY', cw: 'Hindi: अ recognition', hw: 'Maths: Circle shape', tw: 'English: Rhyme', kyaSeekha: 'Hindi ka \'अ\' aur Gol Circle!'},
-        ];
+        // Google Sheet Apps Script URL for Daily Tracker
+        // IMPORTANT: Ye URL aapka apna Google Apps Script deployment URL hona chahiye.
+        // Ye woh URL hai jo aapne provide kiya hai aur jo direct browser mein kaam kar raha hai:
+        const SHEET_URL = "https://script.google.com/macros/s/AKfycbxOUdco3Narq7eq6fNRG-Z9TlfCsfej57aNmLXHOWgk58iwAzY-Ax_2X_2FcneyPrg2bg/exec";
 
-        let myChart; // Chart.js instance
 
         // Function to render Syllabus Explorer view
         function renderSyllabusView(month = 'April') {
@@ -537,55 +632,139 @@
             `;
         }
 
-        // Function to render Daily Tracking Sheet view
-        function renderTrackerView() {
+        // Function to render Daily Tracking Sheet view with Google Sheet integration
+        async function renderTrackerView() {
             const content = document.getElementById('main-content');
             content.innerHTML = `
                 <div class="bg-white p-6 rounded-2xl shadow-lg">
-                    <div class="text-center mb-6">
-                        <h2 class="text-3xl font-bold text-gray-800">Daily Tracking Sheet 📝</h2>
-                        <p class="text-gray-500">Har din kya seekha, yahan record karein.</p>
-                        <p class="text-sm text-gray-400 mt-2">(Ye sheet print karne ya manual bharne ke liye hai)</p>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="tracker-table w-full border-collapse rounded-lg overflow-hidden shadow-md">
+                    <h2 class="text-3xl font-bold mb-6 text-center text-gray-800">Nursery Daily Tracker 📝</h2>
+                    <p class="text-gray-500 mb-4 text-center">Ye data Google Sheet me save hota hai aur wahin se load hota hai.</p>
+                    <p class="text-sm text-red-500 mt-2 mb-6 text-center"><b>IMPORTANT:</b> Agar data load/save nahi ho raha, toh Google Apps Script mein SHEET_ID aur deployment permissions (Anyone) check karein.</p>
+
+                    <div class="overflow-x-auto mb-6 rounded-lg">
+                        <table class="tracker-table w-full text-base">
                             <thead>
-                                <tr class="bg-gray-100">
-                                    <th class="py-3 px-4">Date</th>
-                                    <th class="py-3 px-4">Class Work (CW) ✔️</th>
-                                    <th class="py-3 px-4">Home Work (HW) ✔️</th>
-                                    <th class="py-3 px-4">Test Work (TW) ✔️</th>
-                                    <th class="py-3 px-4">Kya Seekha? (What did we learn today?) 😊</th>
-                                    <th class="py-3 px-4">Teacher's Tick Mark (✓)</th>
+                                <tr>
+                                    <th>Date</th><th>CW</th><th>HW</th><th>TW</th><th>Kya Seekha</th><th>Tick</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                ${trackerExampleRows.map(row => `
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="py-2 px-4">${row.date}</td>
-                                        <td class="py-2 px-4">${row.cw}</td>
-                                        <td class="py-2 px-4">${row.hw}</td>
-                                        <td class="py-2 px-4">${row.tw}</td>
-                                        <td class="py-2 px-4">${row.kyaSeekha}</td>
-                                        <td class="py-2 px-4"></td>
-                                    </tr>
-                                `).join('')}
-                                <!-- Add more empty rows for manual filling -->
-                                ${Array(10).fill().map(() => `
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="py-2 px-4"></td>
-                                        <td class="py-2 px-4"></td>
-                                        <td class="py-2 px-4"></td>
-                                        <td class="py-2 px-4"></td>
-                                        <td class="py-2 px-4"></td>
-                                        <td class="py-2 px-4"></td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
+                            <tbody id="trackerBody"></tbody>
                         </table>
                     </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <input id="date" type="date" placeholder="Date" class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <input id="cw" type="text" placeholder="Class Work" class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <input id="hw" type="text" placeholder="Home Work" class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <input id="tw" type="text" placeholder="Test Work" class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <input id="kyaseekha" type="text" placeholder="Kya Seekha" class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <input id="tick" type="text" placeholder="Tick" class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <button onclick="addRow()" class="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 w-full text-lg font-semibold">Save Entry</button>
                 </div>
             `;
+            await loadTrackerData(); // Load data when tracker view is rendered
+        }
+
+        /**
+         * Loads tracker data from the Google Sheet via Apps Script and displays it in the table.
+         */
+        async function loadTrackerData() {
+            try {
+                const res = await fetch(SHEET_URL);
+                if (!res.ok) {
+                    // If the HTTP response is not OK (e.g., 404, 500), throw an error
+                    throw new Error(`HTTP error! Status: ${res.status}`);
+                }
+                const data = await res.json();
+                const tbody = document.getElementById('trackerBody');
+                tbody.innerHTML = ''; // Clear existing rows
+
+                if (data.error) {
+                    console.error("Apps Script Error:", data.error, data.stack);
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-red-600 py-4">Error loading data: ${data.message || 'Check Apps Script logs.'}</td></tr>`;
+                    return;
+                }
+
+                if (data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-gray-500 py-4">No data available. Add a new entry!</td></tr>`;
+                    return;
+                }
+
+                data.forEach(row => {
+                    // Ensure the keys here match the *cleaned* headers from your Google Sheet
+                    // E.g., if your sheet has "Kya Seekha", the key here should be 'kyaseekha'
+                    // If your sheet has "Tick Mark", the key here should be 'tickmark'
+                    tbody.innerHTML += `<tr>
+                        <td>${row.date || ''}</td>
+                        <td>${row.cw || ''}</td>
+                        <td>${row.hw || ''}</td>
+                        <td>${row.tw || ''}</td>
+                        <td>${row.kyaseekha || ''}</td>
+                        <td>${row.tick || ''}</td>
+                    </tr>`;
+                });
+            } catch (err) {
+                console.error("Failed to load tracker data:", err);
+                document.getElementById('trackerBody').innerHTML = '<tr><td colspan="6" class="text-center text-red-600 py-4">Error loading data. Please check console for details and verify SHEET_URL.</td></tr>';
+            }
+        }
+
+        /**
+         * Adds a new row of data to the Google Sheet via Apps Script.
+         */
+        async function addRow() {
+            // Collect data from input fields.
+            // Ensure these keys (date, cw, hw, etc.) exactly match the *cleaned* headers
+            // that your Google Apps Script expects from your Google Sheet's first row.
+            // For example, if your sheet header is "Home Work", the key here should be 'homework'.
+            // If your sheet header is "Tick Mark", the key here should be 'tickmark'.
+            const data = {
+                date: document.getElementById('date').value,
+                cw: document.getElementById('cw').value,
+                hw: document.getElementById('hw').value,
+                tw: document.getElementById('tw').value,
+                kyaseekha: document.getElementById('kyaseekha').value,
+                tick: document.getElementById('tick').value
+            };
+
+            // Basic client-side validation
+            if (!data.date || !data.cw || !data.kyaseekha) {
+                showMessageBox('Date, Class Work, and Kya Seekha are required fields.');
+                return;
+            }
+
+            try {
+                const res = await fetch(SHEET_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (!res.ok) {
+                    // If the HTTP response is not OK, throw an error
+                    const errorResponse = await res.json(); // Try to parse error response
+                    throw new Error(`HTTP error! Status: ${res.status}. Message: ${errorResponse.message || 'Unknown error'}`);
+                }
+
+                const result = await res.json(); // Parse the JSON response from Apps Script
+
+                if (result.result === 'success') {
+                    showMessageBox('Data saved successfully!');
+                    loadTrackerData(); // Reload data to show the new entry
+                    // Clear input fields after successful save
+                    document.querySelectorAll('#date, #cw, #hw, #tw, #kyaseekha, #tick').forEach(input => input.value = '');
+                } else {
+                    // If Apps Script returned an error, display it
+                    showMessageBox(`Error saving data: ${result.message || 'An unknown error occurred on the server.'}`);
+                    console.error("Apps Script reported an error:", result);
+                }
+            } catch (err) {
+                // Catch any network errors or errors thrown from the fetch response
+                showMessageBox('Error saving data. Please check your internet connection and browser console.');
+                console.error("Failed to save data:", err);
+            }
         }
 
         // Function to render Teacher's Simple Lines view
@@ -638,7 +817,7 @@
                     else if (view === 'rhymes') renderRhymesView();
                     else if (view === 'flashcards') renderFlashcardsView();
                     else if (view === 'questions') renderQuestionsView();
-                    else if (view === 'tracker') renderTrackerView();
+                    else if (view === 'tracker') renderTrackerView(); // Call async tracker view
                     else if (view === 'teacher-lines') renderTeacherLinesView();
                 }
             });
@@ -670,6 +849,7 @@
                     const header = e.target.closest('.accordion-header');
                     const content = header.nextElementSibling;
                     const icon = header.querySelector('span:last-child');
+                    console.log('Accordion header clicked:', header.textContent.trim()); // Debugging log
                     if(content.style.maxHeight) {
                         content.style.maxHeight = null; // Collapse
                         icon.style.transform = 'rotate(0deg)';
@@ -680,77 +860,6 @@
                 }
             });
         });
-        const SHEET_URL = "https://script.google.com/macros/s/AKfycbzhiPo6HPEKQuKMVN9YJc7vdwFTakF7QwpVQD6eWGKj6_F5m1oDKdAsoHz3kZp5281rvQ/exec";
-async function renderTrackerView() {
-    const content = document.getElementById('main-content');
-    content.innerHTML = `
-    <div class="bg-white p-6 rounded-2xl shadow-lg">
-      <div class="text-center mb-6">
-        <h2 class="text-3xl font-bold text-gray-800">Daily Tracking Sheet 📝</h2>
-        <p class="text-gray-500">Ye data Google Sheet me save hota hai aur wahin se load hota hai.</p>
-      </div>
-      <div class="overflow-x-auto mb-6">
-        <table class="tracker-table w-full border-collapse rounded-lg overflow-hidden shadow-md">
-          <thead>
-            <tr class="bg-gray-100">
-              <th class="py-3 px-4">Date</th>
-              <th class="py-3 px-4">Class Work (CW) ✔️</th>
-              <th class="py-3 px-4">Home Work (HW) ✔️</th>
-              <th class="py-3 px-4">Test Work (TW) ✔️</th>
-              <th class="py-3 px-4">Kya Seekha? 😊</th>
-              <th class="py-3 px-4">Teacher's Tick (✓)</th>
-            </tr>
-          </thead>
-          <tbody id="trackerBody"></tbody>
-        </table>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <input id="date" type="text" placeholder="Date" class="p-3 border rounded-lg w-full">
-        <input id="cw" type="text" placeholder="Class Work" class="p-3 border rounded-lg w-full">
-        <input id="hw" type="text" placeholder="Home Work" class="p-3 border rounded-lg w-full">
-        <input id="tw" type="text" placeholder="Test Work" class="p-3 border rounded-lg w-full">
-        <input id="kyaSeekha" type="text" placeholder="Kya Seekha?" class="p-3 border rounded-lg w-full">
-        <input id="tick" type="text" placeholder="Teacher's Tick" class="p-3 border rounded-lg w-full">
-        <button onclick="addRow()" class="bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 transition">Save</button>
-      </div>
-    </div>`;
-    await loadTrackerData();
-}
-async function loadTrackerData() {
-    const res = await fetch(SHEET_URL);
-    const data = await res.json();
-    const tbody = document.getElementById('trackerBody');
-    tbody.innerHTML = '';
-    data.forEach(row => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="py-2 px-4">${row.date}</td>
-          <td class="py-2 px-4">${row.cw}</td>
-          <td class="py-2 px-4">${row.hw}</td>
-          <td class="py-2 px-4">${row.tw}</td>
-          <td class="py-2 px-4">${row.kyaSeekha}</td>
-          <td class="py-2 px-4">${row.tick}</td>`;
-        tbody.appendChild(tr);
-    });
-}
-async function addRow() {
-    const data = {
-        date: document.getElementById('date').value,
-        cw: document.getElementById('cw').value,
-        hw: document.getElementById('hw').value,
-        tw: document.getElementById('tw').value,
-        kyaSeekha: document.getElementById('kyaSeekha').value,
-        tick: document.getElementById('tick').value
-    };
-    await fetch(SHEET_URL, {
-        method: 'POST',
-        body: JSON.stringify(data),
-        headers: { 'Content-Type': 'application/json' }
-    });
-    await loadTrackerData();
-    ['date','cw','hw','tw','kyaSeekha','tick'].forEach(id => document.getElementById(id).value = '');
-}
-document.addEventListener('DOMContentLoaded', renderTrackerView);
     </script>
 </body>
 </html>
