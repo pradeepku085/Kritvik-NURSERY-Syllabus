@@ -7,12 +7,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Chosen Palette: Playful Pastels -->
-    <!-- Application Structure Plan: A dashboard-style SPA with a main "Syllabus Explorer" and separate sections for "Rhymes", "Flashcards", "Question Bank", and "Tracker". This task-oriented design enhances usability by separating the core syllabus from supplementary resources. Users select a month to view its specific weekly plan, preventing information overload. A bar chart visually summarizes the new topics per subject for the selected month, offering a quick overview. This structure is more intuitive and engaging for teachers/parents than a long, static document. -->
-    <!-- Visualization & Content Choices: 
-    - Syllabus: Report's monthly/weekly data -> Goal: Organize/Compare -> Viz: Interactive Grid + Bar Chart -> Interaction: Month selection updates both grid and chart -> Justification: Breaks down a year-long plan into manageable monthly views. The chart provides an instant data-driven summary of monthly subject focus. -> Library: Chart.js for the bar chart, Vanilla JS for the grid.
-    - Rhymes: Report's rhyme list -> Goal: Inform -> Viz: Two-column card layout -> Interaction: N/A -> Justification: Simple, readable presentation.
-    - Flashcards: Report's flashcard topics -> Goal: Organize -> Viz: Tabbed interface -> Interaction: JS-powered tab switching -> Justification: Neatly categorizes related content without cluttering the UI.
-    - Questions: Report's question bank -> Goal: Inform -> Viz: Accordion UI -> Interaction: Click to expand/collapse categories -> Justification: Allows users to focus on specific topics for quick revision.
+    <!-- Application Structure Plan: Ek dashboard-style SPA jismein "Syllabus Explorer", "Rhymes Corner", "Flashcard Hub", "Question Bank", "Daily Tracker", aur naya "Teacher's Lines" section hai. Ye structure report ke content ko user-friendly tareeke se organize karta hai. Users mahina chunta hai weekly plan dekhne ke liye, aur ek bar chart us mahine ke naye topics ka summary deta hai. Daily Tracker manual entry/printing ke liye hai. Teacher's Lines alag se diye gaye hain. Ye sabhi sections alag alag tabs mein hain, jisse navigation aasan ho jaati hai aur information overload nahi hota. -->
+    <!-- Visualization & Content Choices:
+    - Syllabus: Report ka month-wise/week-wise data -> Goal: Organize/Compare -> Viz: Interactive Grid + Bar Chart -> Interaction: Month selection updates grid and chart -> Justification: Saal bhar ke plan ko chote hisson mein baantta hai aur chart se topic focus ka quick overview milta hai. -> Library: Chart.js for bar chart, Vanilla JS for grid.
+    - Rhymes: Report ki rhyme list -> Goal: Inform -> Viz: Two-column card layout -> Interaction: N/A -> Justification: Rhymes ko English aur Hindi mein alag alag dikhata hai.
+    - Flashcards: Report ke flashcard topics -> Goal: Organize -> Viz: Tabbed interface -> Interaction: JS-powered tab switching -> Justification: Phonics, Colours, GK ko alag tabs mein neatly categorize karta hai.
+    - Questions: Report ka question bank -> Goal: Inform -> Viz: Accordion UI -> Interaction: Click to expand/collapse categories -> Justification: Users ko specific topics par focus karne deta hai.
+    - Daily Tracker: Report ka daily tracking sheet structure -> Goal: Track/Record -> Viz: HTML Table with example rows -> Interaction: N/A (print/manual fill ke liye) -> Justification: User ki request ke mutabik ek register-like format deta hai.
+    - Teacher's Lines: Report ke teacher ke liye simple lines -> Goal: Inform -> Viz: Accordion UI -> Interaction: Click to expand/collapse categories -> Justification: Teachers ko alag alag subjects ke liye ready-to-use lines provide karta hai.
     -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
@@ -28,6 +30,8 @@
         .chart-container { position: relative; width: 100%; max-width: 600px; margin: 2rem auto; height: 300px; max-height: 400px; }
         @media (min-width: 768px) { .chart-container { height: 350px; } }
         .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .tracker-table th, .tracker-table td { padding: 0.75rem; border: 1px solid #e2e8f0; text-align: left; }
+        .tracker-table th { background-color: #f8fafc; font-weight: 600; }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,6 +51,8 @@
             <button data-view="rhymes" class="nav-button py-2 px-4 rounded-full bg-white shadow-md hover:bg-gray-100">Rhymes Corner 🎶</button>
             <button data-view="flashcards" class="nav-button py-2 px-4 rounded-full bg-white shadow-md hover:bg-gray-100">Flashcard Hub 🖼️</button>
             <button data-view="questions" class="nav-button py-2 px-4 rounded-full bg-white shadow-md hover:bg-gray-100">Question Bank ❓</button>
+            <button data-view="tracker" class="nav-button py-2 px-4 rounded-full bg-white shadow-md hover:bg-gray-100">Daily Tracker 📝</button>
+            <button data-view="teacher-lines" class="nav-button py-2 px-4 rounded-full bg-white shadow-md hover:bg-gray-100">Teacher's Lines 🗣️</button>
         </nav>
 
         <main id="main-content">
@@ -55,101 +61,255 @@
     </div>
 
     <script>
+        // Data for Syllabus Plan (Saal Bhar Ka Syllabus Plan)
         const syllabusData = {
             April: [
-                { week: 1, english: 'Capital A (Oral & Recog)', maths: '1-5 (Oral)', hindi: 'अ (Recog & Oral)', gk: 'Myself (Mera Naam)' },
-                { week: 2, english: 'Capital B (Oral & Recog)', maths: '1-5 (Oral)', hindi: 'आ (Recog & Oral)', gk: 'Body Parts (Head, Eyes)' },
-                { week: 3, english: 'Capital C (Oral & Recog)', maths: '1-5 (Oral)', hindi: 'इ (Recog & Oral)', gk: 'Body Parts (Ears, Mouth)' },
-                { week: 4, english: 'Capital D (Oral & Recog)', maths: '1-5 (Oral)', hindi: 'ई (Recog & Oral)', gk: 'Body Parts (Legs, Feet)' },
+                { week: 1, english: 'Capital A (Oral & Recognition)', maths: '1-5 (Oral)', hindi: 'अ (Recognition & Oral)', gk: 'Myself (Mera Naam, Mai Ladka/Ladki)' },
+                { week: 2, english: 'Capital B (Oral & Recognition)', maths: '1-5 (Oral)', hindi: 'आ (Recognition & Oral)', gk: 'My Body Parts (Head, Eyes, Nose)' },
+                { week: 3, english: 'Capital C (Oral & Recognition)', maths: '1-5 (Oral)', hindi: 'इ (Recognition & Oral)', gk: 'My Body Parts (Ears, Mouth, Hands)' },
+                { week: 4, english: 'Capital D (Oral & Recognition)', maths: '1-5 (Oral)', hindi: 'ई (Recognition & Oral)', gk: 'My Body Parts (Legs, Feet, Fingers)' },
             ],
             May: [
-                { week: 1, english: 'Capital E (Oral & Recog)', maths: '1-10 (Oral)', hindi: 'उ (Recog & Oral)', gk: 'Fruits (Apple, Banana)' },
-                { week: 2, english: 'Capital F (Oral & Recog)', maths: '1-10 (Oral)', hindi: 'ऊ (Recog & Oral)', gk: 'Fruits (Mango, Grapes)' },
-                { week: 3, english: 'Capital G (Oral & Recog)', maths: '1-10 (Oral)', hindi: 'ऋ (Recog & Oral)', gk: 'Fruits (Orange)' },
-                { week: 4, english: 'Capital H (Oral & Recog)', maths: '1-10 (Oral)', hindi: 'ए (Recog & Oral)', gk: 'Revision: Fruits' },
+                { week: 1, english: 'Capital E (Oral & Recognition)', maths: '1-10 (Oral)', hindi: 'उ (Recognition & Oral)', gk: 'Fruits (Apple, Banana)' },
+                { week: 2, english: 'Capital F (Oral & Recognition)', maths: '1-10 (Oral)', hindi: 'ऊ (Recognition & Oral)', gk: 'Fruits (Mango, Grapes)' },
+                { week: 3, english: 'Capital G (Oral & Recognition)', maths: '1-10 (Oral)', hindi: 'ऋ (Recognition & Oral)', gk: 'Fruits (Orange, Watermelon)' },
+                { week: 4, english: 'Capital H (Oral & Recognition)', maths: '1-10 (Oral)', hindi: 'ए (Recognition & Oral)', gk: 'Revision: Fruits' },
             ],
             June: [
-                { week: 1, english: 'Capital I (Oral & Recog)', maths: '1-15 (Oral)', hindi: 'ऐ (Recog & Oral)', gk: 'Vegetables (Potato)' },
-                { week: 2, english: 'Capital J (Oral & Recog)', maths: '1-15 (Oral)', hindi: 'ओ (Recog & Oral)', gk: 'Vegetables (Tomato)' },
-                { week: 3, english: 'Capital K (Oral & Recog)', maths: '1-15 (Oral)', hindi: 'औ (Recog & Oral)', gk: 'Vegetables (Onion)' },
-                { week: 4, english: 'Capital L (Oral & Recog)', maths: '1-15 (Oral)', hindi: 'अं (Recog & Oral)', gk: 'Revision: Vegetables' },
+                { week: 1, english: 'Capital I (Oral & Recognition)', maths: '1-15 (Oral)', hindi: 'ऐ (Recognition & Oral)', gk: 'Vegetables (Potato, Tomato)' },
+                { week: 2, english: 'Capital J (Oral & Recognition)', maths: '1-15 (Oral)', hindi: 'ओ (Recognition & Oral)', gk: 'Vegetables (Onion, Carrot)' },
+                { week: 3, english: 'Capital K (Oral & Recognition)', maths: '1-15 (Oral)', hindi: 'औ (Recognition & Oral)', gk: 'Vegetables (Peas, Brinjal)' },
+                { week: 4, english: 'Capital L (Oral & Recognition)', maths: '1-15 (Oral)', hindi: 'अं (Recognition & Oral)', gk: 'Revision: Vegetables' },
             ],
             July: [
-                { week: 1, english: 'A-Z Recog', maths: '1-20 (Oral)', hindi: 'अ-अः (Recog)', gk: 'Domestic Animals' },
-                { week: 2, english: 'A, B (Writing)', maths: '1-5 (Writing)', hindi: 'अ, आ (Writing)', gk: 'Cow, Goat' },
-                { week: 3, english: 'C, D (Writing)', maths: '1-10 (Writing)', hindi: 'इ, ई (Writing)', gk: 'Wild Animals' },
-                { week: 4, english: 'E, F (Writing)', maths: 'Counting Objects (1-5)', hindi: 'उ, ऊ (Writing)', gk: 'Elephant, Monkey' },
+                { week: 1, english: 'Capital A-Z (Recognition)', maths: '1-20 (Oral)', hindi: 'अ-अः (Recognition)', gk: 'Domestic Animals (Dog, Cat)' },
+                { week: 2, english: 'Capital A, B (Writing)', maths: '1-5 (Writing)', hindi: 'अ, आ (Writing)', gk: 'Domestic Animals (Cow, Goat)' },
+                { week: 3, english: 'Capital C, D (Writing)', maths: '1-10 (Writing)', hindi: 'इ, ई (Writing)', gk: 'Wild Animals (Lion, Tiger)' },
+                { week: 4, english: 'Capital E, F (Writing)', maths: 'Counting Objects (1-5)', hindi: 'उ, ऊ (Writing)', gk: 'Wild Animals (Elephant, Monkey)' },
             ],
             August: [
-                { week: 1, english: 'G, H (Writing)', maths: 'Big-Small Concept', hindi: 'ऋ, ए (Writing)', gk: 'Flowers (Rose, Lotus)' },
-                { week: 2, english: 'I, J (Writing)', maths: 'Tall-Short Concept', hindi: 'ऐ, ओ (Writing)', gk: 'Flowers (Sunflower)' },
-                { week: 3, english: 'K, L (Writing)', maths: 'More-Less Concept', hindi: 'औ, अं (Writing)', gk: 'Trees' },
-                { week: 4, english: 'M, N (Writing)', maths: 'Heavy-Light Concept', hindi: 'अः (Writing)', gk: 'Revision' },
+                { week: 1, english: 'Capital G, H (Writing)', maths: 'Big-Small Concept', hindi: 'ऋ, ए (Writing)', gk: 'Flowers (Rose, Lotus)' },
+                { week: 2, english: 'Capital I, J (Writing)', maths: 'Tall-Short Concept', hindi: 'ऐ, ओ (Writing)', gk: 'Flowers (Sunflower, Lily)' },
+                { week: 3, english: 'Capital K, L (Writing)', maths: 'More-Less Concept', hindi: 'औ, अं (Writing)', gk: 'Trees (Mango Tree, Banyan Tree)' },
+                { week: 4, english: 'Capital M, N (Writing)', maths: 'Heavy-Light Concept', hindi: 'अः (Writing)', gk: 'Revision: Animals, Flowers, Trees' },
             ],
             September: [
-                { week: 1, english: 'O, P (Writing)', maths: 'Up-Down Concept', hindi: 'Writing Practice', gk: 'Seasons (Summer, Winter)' },
-                { week: 2, english: 'Q, R (Writing)', maths: 'Full-Empty Concept', hindi: 'दो अक्षर के शब्द (Oral)', gk: 'Seasons (Rainy)' },
-                { week: 3, english: 'S, T (Writing)', maths: 'Shapes: Circle, Square', hindi: 'दो अक्षर के शब्द (Writing)', gk: 'Things from Plants' },
-                { week: 4, english: 'U, V (Writing)', maths: 'Shapes: Triangle', hindi: 'Writing Practice', gk: 'Revision' },
+                { week: 1, english: 'Capital O, P (Writing)', maths: 'Up-Down Concept', hindi: 'अ-अः (Writing Practice)', gk: 'Seasons (Summer, Winter)' },
+                { week: 2, english: 'Capital Q, R (Writing)', maths: 'Full-Empty Concept', hindi: 'दो अक्षर के शब्द (Oral)', gk: 'Seasons (Rainy, Spring)' },
+                { week: 3, english: 'Capital S, T (Writing)', maths: 'Shapes: Circle, Square', hindi: 'दो अक्षर के शब्द (Writing)', gk: 'Things from Plants (Wood, Paper)' },
+                { week: 4, english: 'Capital U, V (Writing)', maths: 'Shapes: Triangle, Rectangle', hindi: 'दो अक्षर के शब्द (Writing)', gk: 'Things from Plants (Fruits, Vegetables)' },
             ],
             October: [
-                { week: 1, english: 'W, X (Writing)', maths: '1-15 (Writing)', hindi: 'तीन अक्षर के शब्द (Oral)', gk: 'Magic Words (Please, Thank you)' },
-                { week: 2, english: 'Y, Z (Writing)', maths: 'Counting (1-10)', hindi: 'तीन अक्षर के शब्द (Writing)', gk: 'Magic Words (Sorry)' },
-                { week: 3, english: 'Small a, b (Recog)', maths: '1-50 (Oral)', hindi: 'छोटी कविता (Oral)', gk: 'Transport (Car, Bus)' },
-                { week: 4, english: 'Small c, d (Recog)', maths: '1-50 (Oral)', hindi: 'कविता (Oral)', gk: 'Transport (Train, Aeroplane)' },
+                { week: 1, english: 'Capital W, X (Writing)', maths: '1-15 (Writing)', hindi: 'तीन अक्षर के शब्द (Oral)', gk: 'Magic Words (Please, Thank You)' },
+                { week: 2, english: 'Capital Y, Z (Writing)', maths: 'Counting Objects (1-10)', hindi: 'तीन अक्षर के शब्द (Writing)', gk: 'Magic Words (Sorry, Excuse Me)' },
+                { week: 3, english: 'Small a, b (Recognition)', maths: '1-50 (Oral)', hindi: 'छोटी हिंदी कविता (Oral)', gk: 'Transport (Car, Bus)' },
+                { week: 4, english: 'Small c, d (Recognition)', maths: '1-50 (Oral)', hindi: 'छोटी हिंदी कविता (Oral)', gk: 'Transport (Train, Aeroplane)' },
             ],
             November: [
-                { week: 1, english: 'Small e, f (Recog)', maths: 'Writing Practice', hindi: 'Writing Practice', gk: 'Helpers (Doctor, Teacher)' },
-                { week: 2, english: 'Small g, h (Recog)', maths: 'Counting (1-15)', hindi: 'Writing Practice', gk: 'Helpers (Policeman)' },
-                { week: 3, english: 'Small i, j (Recog)', maths: '1-75 (Oral)', hindi: 'कविता (Action)', gk: 'Festivals (Diwali, Holi)' },
-                { week: 4, english: 'Small k, l (Recog)', maths: '1-75 (Oral)', hindi: 'कविता (Action)', gk: 'Festivals (Christmas, Eid)' },
+                { week: 1, english: 'Small e, f (Recognition)', maths: '1-15 (Writing)', hindi: 'तीन अक्षर के शब्द (Oral)', gk: 'Community Helpers (Doctor, Teacher)' },
+                { week: 2, english: 'Small g, h (Recognition)', maths: 'Counting Objects (1-15)', hindi: 'तीन अक्षर के शब्द (Writing)', gk: 'Community Helpers (Policeman, Fireman)' },
+                { week: 3, english: 'Small i, j (Recognition)', maths: '1-75 (Oral)', hindi: 'हिंदी कविता (Oral & Action)', gk: 'Festivals (Diwali, Holi)' },
+                { week: 4, english: 'Small k, l (Recognition)', maths: '1-75 (Oral)', hindi: 'हिंदी कविता (Oral & Action)', gk: 'Festivals (Christmas, Eid)' },
             ],
             December: [
-                { week: 1, english: 'Small m, n (Recog)', maths: '1-20 (Writing)', hindi: 'चार अक्षर के शब्द (Oral)', gk: 'Good Habits (Brushing)' },
-                { week: 2, english: 'Small o, p (Recog)', maths: 'Counting (1-20)', hindi: 'चार अक्षर के शब्द (Writing)', gk: 'Good Habits (Bathing)' },
-                { week: 3, english: 'Small q, r (Recog)', maths: '1-100 (Oral)', hindi: 'कहानी (Simple)', gk: 'Good Habits (Sharing)' },
-                { week: 4, english: 'Small s, t (Recog)', maths: '1-100 (Oral)', hindi: 'कहानी (Simple)', gk: 'Revision' },
+                { week: 1, english: 'Small m, n (Recognition)', maths: '1-20 (Writing)', hindi: 'चार अक्षर के शब्द (Oral)', gk: 'Good Habits (Waking Up Early, Brushing Teeth)' },
+                { week: 2, english: 'Small o, p (Recognition)', maths: 'Counting Objects (1-20)', hindi: 'चार अक्षर के शब्द (Writing)', gk: 'Good Habits (Bathing, Eating Healthy)' },
+                { week: 3, english: 'Small q, r (Recognition)', maths: '1-100 (Oral)', hindi: 'हिंदी कहानी (Simple)', gk: 'Good Habits (Sharing, Helping)' },
+                { week: 4, english: 'Small s, t (Recognition)', maths: '1-100 (Oral)', hindi: 'हिंदी कहानी (Simple)', gk: 'Revision: Good Habits' },
             ],
             January: [
-                { week: 1, english: 'Small u, v (Recog)', maths: 'Revision', hindi: 'Revision', gk: 'Revision (Myself, Fruits)' },
-                { week: 2, english: 'Small w, x (Recog)', maths: 'Revision', hindi: 'Revision', gk: 'Revision (Animals, Flowers)' },
-                { week: 3, english: 'Small y, z (Recog)', maths: 'Revision', hindi: 'Revision', gk: 'Revision (Seasons, Transport)' },
-                { week: 4, english: 'A-Z Capital (Revision)', maths: 'Revision', hindi: 'Revision', gk: 'Revision (All)' },
+                { week: 1, english: 'Small u, v (Recognition)', maths: '1-20 (Writing Revision)', hindi: 'अ-अः (Writing Revision)', gk: 'Revision: Myself, Body Parts, Fruits, Vegetables' },
+                { week: 2, english: 'Small w, x (Recognition)', maths: 'Counting Objects (Revision)', hindi: 'दो अक्षर के शब्द (Revision)', gk: 'Revision: Animals, Flowers, Trees' },
+                { week: 3, english: 'Small y, z (Recognition)', maths: 'Shapes (All Revision)', hindi: 'तीन अक्षर के शब्द (Revision)', gk: 'Revision: Seasons, Things from Plants' },
+                { week: 4, english: 'Capital A-Z (Writing Revision)', maths: 'Big-Small, More-Less etc. (Revision)', hindi: 'चार अक्षर के शब्द (Revision)', gk: 'Revision: Magic Words, Transport, Helpers' },
             ],
             February: [
-                { week: 1, english: 'Small a-z (Writing)', maths: 'Revision', hindi: 'Revision', gk: 'Revision (All)' },
-                { week: 2, english: 'Phonics (Revision)', maths: 'Revision', hindi: 'Revision', gk: 'Oral Tests' },
-                { week: 3, english: 'Rhymes (Revision)', maths: 'Revision', hindi: 'Revision', gk: 'Oral Tests' },
-                { week: 4, english: 'Vocabulary (Revision)', maths: 'Revision', hindi: 'Revision', gk: 'Oral Tests' },
+                { week: 1, english: 'Small a-z (Writing Practice)', maths: '1-100 (Oral Revision)', hindi: 'हिंदी कविता (Revision)', gk: 'Revision: Festivals, Good Habits' },
+                { week: 2, english: 'Phonics Sounds (Revision)', maths: '1-20 (Writing Revision)', hindi: 'अ-अः (Oral & Recognition)', gk: 'All GK/EVS Topics (Oral)' },
+                { week: 3, english: 'Rhymes (Revision)', maths: 'Counting Objects (Revision)', hindi: 'Simple Hindi Words (Oral)', gk: 'All GK/EVS Topics (Oral)' },
+                { week: 4, english: 'Vocabulary (Revision)', maths: 'Shapes & Concepts (Revision)', hindi: 'Hindi Rhymes (Oral)', gk: 'All GK/EVS Topics (Oral)' },
             ],
             March: [
-                { week: 1, english: 'Full Syllabus Revision', maths: 'Full Syllabus Revision', hindi: 'Full Syllabus Revision', gk: 'Full Syllabus Revision' },
+                { week: 1, english: 'Full English Syllabus Revision', maths: 'Full Maths Syllabus Revision', hindi: 'Full Hindi Syllabus Revision', gk: 'Full GK/EVS Syllabus Revision' },
                 { week: 2, english: 'Oral Test Practice', maths: 'Oral Test Practice', hindi: 'Oral Test Practice', gk: 'Oral Test Practice' },
                 { week: 3, english: 'Writing Test Practice', maths: 'Writing Test Practice', hindi: 'Writing Test Practice', gk: 'Practical Test Practice' },
                 { week: 4, english: 'Fun Activities & Games!', maths: 'Fun Activities & Games!', hindi: 'Fun Activities & Games!', gk: 'Fun Activities & Games!' },
             ],
         };
 
+        // Data for Weekly Oral Test & Rhymes List
+        const oralTestTopics = {
+            english: [
+                'Alphabet recognition (A-Z Capital/Small jo sikhaya)',
+                'Phonics sounds (jo sikhaya)',
+                'Vocabulary words (jo sikhaya)'
+            ],
+            maths: [
+                'Numbers oral (1-100 tak jo sikhaya)',
+                'Counting objects (jo sikhaya)',
+                'Shapes recognition (jo sikhaya)',
+                'Concepts (Big-Small, More-Less etc. jo sikhaya)'
+            ],
+            hindi: [
+                'अ-अः recognition (jo sikhaya)',
+                'Simple words oral (jo sikhaya)'
+            ],
+            gkEVS: [
+                'Questions about Myself, Body Parts, Fruits, Vegetables, Animals, Flowers, Seasons, Magic Words (jo sikhaya)'
+            ]
+        };
+
         const rhymesData = {
-            english: ["Twinkle Twinkle", "Baa Baa Black Sheep", "Johnny Johnny", "Humpty Dumpty", "Jack and Jill", "Rain Rain Go Away", "ABCD Song", "Head Shoulders Knees & Toes"],
-            hindi: ["Machhli Jal Ki Rani", "Aaloo Kachaloo Beta", "Chanda Mama Door Ke", "Nani Teri Morni", "Ek Mota Hathi", "Titli Udi", "Lal Tamatar", "Chuk Chuk Rail Gadi"]
+            english: [
+                'Twinkle Twinkle Little Star ✨',
+                'Baa Baa Black Sheep 🐑',
+                'Johnny Johnny Yes Papa 🍬',
+                'Humpty Dumpty �',
+                'Jack and Jill 🏞️',
+                'Rain Rain Go Away ☔',
+                'ABCD Song 🎵',
+                'If You\'re Happy and You Know It 👏',
+                'One Two Buckle My Shoe 👟',
+                'Head Shoulders Knees and Toes 🧍'
+            ],
+            hindi: [
+                'Machhli Jal Ki Rani Hai 🐠',
+                'Aaloo Kachaloo Beta 🥔',
+                'Chanda Mama Door Ke 🌙',
+                'Nani Teri Morni Ko Mor Le Gaye 🐦',
+                'Ek Mota Hathi 🐘',
+                'Titli Udi 🦋',
+                'Lal Tamatar 🍅',
+                'Chuk Chuk Rail Gadi 🚂',
+                'Billu Rani 🐱',
+                'Hathi Raja Kahan Chale 👑'
+            ]
         };
 
+        // Data for Phonics + Colours + GK Flashcard Summary
         const flashcardsData = {
-            phonics: ["A for Apple", "B for Ball", "C for Cat", "D for Dog", "E for Elephant", "F for Fish", "...aur bhi"],
-            colors: ["Red (Laal) ❤️", "Blue (Neela) 💙", "Yellow (Peela) 💛", "Green (Hara) 💚", "Orange (Narangi) 🧡", "Pink (Gulabi) 💖"],
-            gk: ["Fruits: Apple, Banana, Mango", "Vegetables: Potato, Tomato", "Animals: Dog, Cat, Lion", "Transport: Car, Bus, Train"]
+            phonics: [
+                'A - /a/ (as in Apple) 🍎',
+                'B - /b/ (as in Ball) ⚽',
+                'C - /c/ (as in Cat) 🐱',
+                'D - /d/ (as in Dog) 🐶',
+                'E - /e/ (as in Elephant) 🐘',
+                'F - /f/ (as in Fish) 🐟',
+                'G - /g/ (as in Grapes) 🍇',
+                'H - /h/ (as in Hat) 🎩',
+                'I - /i/ (as in Igloo) 🧊',
+                'J - /j/ (as in Jug) 🥛',
+                'K - /k/ (as in Kite) 🪁',
+                'L - /l/ (as in Lion) 🦁',
+                'M - /m/ (as in Mango) 🥭',
+                'N - /n/ (as in Nest) 🐦',
+                'O - /o/ (as in Orange) 🍊',
+                'P - /p/ (as in Pen) 🖊️',
+                'Q - /q/ (as in Queen) 👑',
+                'R - /r/ (as in Rose) 🌹',
+                'S - /s/ (as in Sun) ☀️',
+                'T - /t/ (as in Tiger) 🐯',
+                'U - /u/ (as in Umbrella) ☂️',
+                'V - /v/ (as in Van) 🚐',
+                'W - /w/ (as in Watch) ⌚',
+                'X - /x/ (as in Xylophone) 🎶',
+                'Y - /y/ (as in Yak) 🐄',
+                'Z - /z/ (as in Zebra) 🦓'
+            ],
+            colors: [
+                'Red (Laal) ❤️',
+                'Blue (Neela) 💙',
+                'Yellow (Peela) 💛',
+                'Green (Hara) 💚',
+                'Orange (Narangi) 🧡',
+                'Pink (Gulabi) 💖',
+                'Black (Kala) ⚫',
+                'White (Safed) ⚪',
+                'Brown (Bhura) 🟫',
+                'Purple (Baingani) 💜'
+            ],
+            gk: [
+                'Fruits: Apple, Banana, Mango, Grapes, Orange, Watermelon 🍎🍌🥭🍇🍊🍉',
+                'Vegetables: Potato, Tomato, Onion, Carrot, Peas, Brinjal 🥔🍅🧅🥕🥦🍆',
+                'Animals: Dog, Cat, Cow, Lion, Tiger, Elephant, Monkey 🐶🐱🐄🦁🐯🐘🐒',
+                'Flowers: Rose, Lotus, Sunflower 🌹🌸🌻',
+                'Transport: Car, Bus, Train, Aeroplane 🚗🚌🚂✈️',
+                'Community Helpers: Doctor, Teacher, Policeman, Fireman 👩‍⚕️👩‍🏫👮‍♂️👨‍🚒',
+                'Seasons: Sun (Summer), Snow (Winter), Rain (Rainy) ☀️❄️☔'
+            ]
         };
 
+        // Data for Simple Oral Question Bank
         const questionsData = {
-            'Myself & Body': ["Aapka naam kya hai?", "Aapki nose kahan hai? 👃", "Aapki kitni aankhein hain? 👀"],
-            'Fruits & Vegetables': ["Ye kaun sa fruit hai? 🍎", "Apple ka rang kya hai?", "Aapko kaun si sabzi pasand hai? 🥕"],
-            'Animals & Flowers': ["Dog kaise bolta hai? 🐶", "Lion kahan rehta hai? 🦁", "Rose ka rang kya hota hai? 🌹"],
-            'Magic Words': ["Kuch chahiye toh kya bolte ho? 🙏", "Galti ho jaye toh kya bolte ho?"]
+            'Myself / Body Parts': [
+                'Beta, aapka naam kya hai? 😊',
+                'Ye kya hai? (Point to nose) 👃',
+                'Aap kitni aankhein hain? 👀',
+                'Aapke haath mein kitni ungliyan hain? 👋'
+            ],
+            'Fruits / Vegetables': [
+                'Ye kaun sa fruit hai? (Show apple) 🍎',
+                'Apple ka rang kya hai? ❤️',
+                'Aapko kaun si sabzi pasand hai? 🥕',
+                'Potato ka rang kya hota hai? 🥔'
+            ],
+            'Animals / Flowers': [
+                'Dog kaise bolta hai? 🐶',
+                'Lion kahan rehta hai? 🦁',
+                'Rose ka rang kya hota hai? 🌹',
+                'Ye kaun sa phool hai? (Show lotus) 🌸'
+            ],
+            'Seasons / Things from Plants': [
+                'Garmiyon mein hum kya pehente hain? ☀️',
+                'Barish mein kya hota hai? ☔',
+                'Humein lakdi kahan se milti hai? 🪵',
+                'Paper kis se banta hai? 📄'
+            ],
+            'Magic Words': [
+                'Agar aapko kuch chahiye toh kya bolte ho? 🙏',
+                'Agar kisi ne aapki help ki toh kya bolte ho? 😊',
+                'Agar galti ho jaye toh kya bolte ho? 🙇‍♀️'
+            ]
         };
 
-        let myChart;
+        // Data for Teacher's Simple Lines
+        const teacherLinesData = {
+            'English': [
+                '"Beta, ye Capital A hai. Bolo, A for Apple. Kya apple red hai?" 🍎',
+                '"Ab hum B likhenge. B for Ball. Ball ko kick karte hain na?" ⚽',
+                '"Sound suno! C says /c/. Cat! Meow meow!" 🐱',
+                '"Come on, let\'s sing the ABCD song together!" 🎶'
+            ],
+            'Maths': [
+                '"Chalo, count karte hain. One, two, three... Kitni fingers hain?" 🖐️',
+                '"Ye big ball hai aur ye small ball. Kaun si big hai?" ⚽',
+                '"Ye circle hai, gol gol. Tumhari roti bhi gol hoti hai na?" ⭕',
+                '"Ab hum 1 se 5 tak likhenge. Slow slow, good good!"✍️'
+            ],
+            'Hindi': [
+                '"Baccho, ye \'अ\' hai. \'अ\' se Anar. Anar lal hota hai." ❤️',
+                '"Ab hum \'आ\' likhenge. \'आ\' se Aam. Aam meetha hota hai." 🥭',
+                '"Chalo, Machhli Jal Ki Rani Hai gaate hain!" 🐠',
+                '"Ye do akshar ka shabd hai: \'जल\' (jal). Bolo jal!" 💧'
+            ],
+            'GK / EVS': [
+                '"Beta, aapka naam kya hai? Batao, batao!" 😊',
+                '"Ye hamara nose hai. Nose se hum smell karte hain." 👃',
+                '"Ye apple hai. Apple healthy hota hai. Khate ho na?" 🍎',
+                '"Lion jungle mein rehta hai. Roar karta hai!" 🦁',
+                '"Jab humein thank you bolna ho toh kya bolte hain? Please bolte hain?" 🙏 (Correct them if they say wrong)'
+            ]
+        };
 
+        // Data for Daily Tracking Sheet (Example Rows)
+        const trackerExampleRows = [
+            { date: 'DD/MM/YY', cw: 'English: A writing', hw: 'Maths: 1-5 oral', tw: 'GK: My Body Parts', kyaSeekha: 'Naya Akshar \'A\' aur Body Parts ke naam!'},
+            { date: 'DD/MM/YY', cw: 'Hindi: अ recognition', hw: 'Maths: Circle shape', tw: 'English: Rhyme', kyaSeekha: 'Hindi ka \'अ\' aur Gol Circle!'},
+        ];
+
+        let myChart; // Chart.js instance
+
+        // Function to render Syllabus Explorer view
         function renderSyllabusView(month = 'April') {
             const content = document.getElementById('main-content');
             const months = Object.keys(syllabusData);
@@ -161,7 +321,7 @@
             content.innerHTML = `
                 <div class="bg-white p-6 rounded-2xl shadow-lg">
                     <div class="text-center mb-6">
-                        <h2 class="text-3xl font-bold text-gray-800">Syllabus Explorer</h2>
+                        <h2 class="text-3xl font-bold text-gray-800">Syllabus Explorer 🗺️</h2>
                         <p class="text-gray-500">Mahina (Month) select karein aur week-wise plan dekhein.</p>
                     </div>
                     <div class="flex flex-wrap justify-center gap-2 mb-8">
@@ -180,9 +340,10 @@
             renderSyllabusForMonth(month);
         }
 
+        // Function to render syllabus for a specific month
         function renderSyllabusForMonth(month) {
             const grid = document.getElementById('syllabus-grid');
-            if (!grid) return;
+            if (!grid) return; // Exit if grid element not found
             
             const monthData = syllabusData[month];
             grid.innerHTML = monthData.map(week => `
@@ -200,24 +361,28 @@
             updateChart(month);
         }
 
+        // Function to update the Chart.js graph
         function updateChart(month) {
             const ctx = document.getElementById('topicsChart');
-            if(!ctx) return;
+            if(!ctx) return; // Exit if canvas element not found
 
             const monthData = syllabusData[month];
             const topicCounts = { english: 0, maths: 0, hindi: 0, gk: 0 };
             
             monthData.forEach(week => {
+                // Count topics, excluding revisions
                 if(!week.english.toLowerCase().includes('revision')) topicCounts.english++;
                 if(!week.maths.toLowerCase().includes('revision')) topicCounts.maths++;
                 if(!week.hindi.toLowerCase().includes('revision')) topicCounts.hindi++;
                 if(!week.gk.toLowerCase().includes('revision')) topicCounts.gk++;
             });
 
+            // Destroy previous chart instance if it exists
             if (myChart) {
                 myChart.destroy();
             }
 
+            // Create new Chart.js instance
             myChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -225,32 +390,59 @@
                     datasets: [{
                         label: `Naye Topics in ${month}`,
                         data: [topicCounts.english, topicCounts.maths, topicCounts.hindi, topicCounts.gk],
-                        backgroundColor: ['#60A5FA', '#34D399', '#F97316', '#A78BFA'],
-                        borderColor: ['#3B82F6', '#10B981', '#F97316', '#8B5CF6'],
+                        backgroundColor: ['#60A5FA', '#34D399', '#F97316', '#A78BFA'], // Tailwind colors
+                        borderColor: ['#3B82F6', '#10B981', '#F97316', '#8B5CF6'], // Darker shades for border
                         borderWidth: 1,
                         borderRadius: 5,
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
+                    maintainAspectRatio: false, // Important for responsive height
                     scales: {
                         y: {
                             beginAtZero: true,
                             ticks: {
-                                stepSize: 1
+                                stepSize: 1 // Ensure whole numbers for topic counts
                             }
                         }
                     },
                     plugins: {
                         legend: {
-                            display: false
+                            display: false // No need for legend as label is in title
                         },
                         title: {
                             display: true,
-                            text: `Month Focus: Naye Topics ki Ginti`,
+                            text: `Month Focus: Naye Topics ki Ginti (${month})`, // Dynamic title
                             font: {
                                 size: 16
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y + ' topics';
+                                    }
+                                    return label;
+                                },
+                                title: function(context) {
+                                    // Wrap long labels for better readability
+                                    const title = context[0].label;
+                                    const maxLen = 16;
+                                    if (title.length > maxLen) {
+                                        let parts = [];
+                                        for (let i = 0; i < title.length; i += maxLen) {
+                                            parts.push(title.substring(i, i + maxLen));
+                                        }
+                                        return parts;
+                                    }
+                                    return title;
+                                }
                             }
                         }
                     }
@@ -258,7 +450,7 @@
             });
         }
 
-
+        // Function to render Rhymes Corner view
         function renderRhymesView() {
             const content = document.getElementById('main-content');
             content.innerHTML = `
@@ -285,6 +477,7 @@
             `;
         }
         
+        // Function to render Flashcard Hub view
         function renderFlashcardsView() {
             const content = document.getElementById('main-content');
             content.innerHTML = `
@@ -301,9 +494,10 @@
                     <div id="flashcard-content"></div>
                 </div>
             `;
-            renderFlashcardTab('phonics');
+            renderFlashcardTab('phonics'); // Default tab
         }
 
+        // Function to render content for a specific flashcard tab
         function renderFlashcardTab(tab) {
             const tabContent = document.getElementById('flashcard-content');
             let dataList;
@@ -315,6 +509,7 @@
             </ul>`;
         }
 
+        // Function to render Question Bank view
         function renderQuestionsView() {
             const content = document.getElementById('main-content');
             content.innerHTML = `
@@ -342,26 +537,115 @@
             `;
         }
 
+        // Function to render Daily Tracking Sheet view
+        function renderTrackerView() {
+            const content = document.getElementById('main-content');
+            content.innerHTML = `
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <div class="text-center mb-6">
+                        <h2 class="text-3xl font-bold text-gray-800">Daily Tracking Sheet 📝</h2>
+                        <p class="text-gray-500">Har din kya seekha, yahan record karein.</p>
+                        <p class="text-sm text-gray-400 mt-2">(Ye sheet print karne ya manual bharne ke liye hai)</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="tracker-table w-full border-collapse rounded-lg overflow-hidden shadow-md">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="py-3 px-4">Date</th>
+                                    <th class="py-3 px-4">Class Work (CW) ✔️</th>
+                                    <th class="py-3 px-4">Home Work (HW) ✔️</th>
+                                    <th class="py-3 px-4">Test Work (TW) ✔️</th>
+                                    <th class="py-3 px-4">Kya Seekha? (What did we learn today?) 😊</th>
+                                    <th class="py-3 px-4">Teacher's Tick Mark (✓)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${trackerExampleRows.map(row => `
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="py-2 px-4">${row.date}</td>
+                                        <td class="py-2 px-4">${row.cw}</td>
+                                        <td class="py-2 px-4">${row.hw}</td>
+                                        <td class="py-2 px-4">${row.tw}</td>
+                                        <td class="py-2 px-4">${row.kyaSeekha}</td>
+                                        <td class="py-2 px-4"></td>
+                                    </tr>
+                                `).join('')}
+                                <!-- Add more empty rows for manual filling -->
+                                ${Array(10).fill().map(() => `
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="py-2 px-4"></td>
+                                        <td class="py-2 px-4"></td>
+                                        <td class="py-2 px-4"></td>
+                                        <td class="py-2 px-4"></td>
+                                        <td class="py-2 px-4"></td>
+                                        <td class="py-2 px-4"></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Function to render Teacher's Simple Lines view
+        function renderTeacherLinesView() {
+            const content = document.getElementById('main-content');
+            content.innerHTML = `
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <div class="text-center mb-6">
+                        <h2 class="text-3xl font-bold text-gray-800">Teacher's Simple Lines 🗣️</h2>
+                        <p class="text-gray-500">Ye kuch simple lines hain jo teacher bol sakte hain baccho ko padhate waqt.</p>
+                    </div>
+                    <div class="space-y-4">
+                        ${Object.keys(teacherLinesData).map(subject => `
+                            <div>
+                                <button class="accordion-header w-full text-left text-xl font-semibold p-4 bg-gray-100 rounded-lg flex justify-between items-center hover:bg-gray-200">
+                                    <span>${subject}</span>
+                                    <span class="transform transition-transform duration-300">▼</span>
+                                </button>
+                                <div class="accordion-content">
+                                    <ul class="list-disc list-inside space-y-2 p-4 bg-gray-50 rounded-b-lg">
+                                        ${teacherLinesData[subject].map(line => `<li class="text-lg">${line}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+
+        // Event Listeners
         document.addEventListener('DOMContentLoaded', () => {
             const mainContent = document.getElementById('main-content');
             
+            // Render default view on load
             renderSyllabusView();
 
+            // Navigation button click handler
             document.querySelector('nav').addEventListener('click', (e) => {
                 if (e.target.matches('.nav-button')) {
                     const view = e.target.dataset.view;
                     
+                    // Remove active class from all buttons and add to clicked one
                     document.querySelectorAll('.nav-button').forEach(b => b.classList.remove('active'));
                     e.target.classList.add('active');
 
+                    // Render the selected view
                     if (view === 'syllabus') renderSyllabusView();
                     else if (view === 'rhymes') renderRhymesView();
                     else if (view === 'flashcards') renderFlashcardsView();
                     else if (view === 'questions') renderQuestionsView();
+                    else if (view === 'tracker') renderTrackerView();
+                    else if (view === 'teacher-lines') renderTeacherLinesView();
                 }
             });
 
+            // Event delegation for content area interactions (month buttons, flashcard tabs, accordions)
             mainContent.addEventListener('click', (e) => {
+                // Month button click handler in Syllabus Explorer
                 if (e.target.matches('.month-button')) {
                     const month = e.target.dataset.month;
                     document.querySelectorAll('.month-button').forEach(b => b.classList.remove('active'));
@@ -369,6 +653,7 @@
                     renderSyllabusForMonth(month);
                 }
 
+                // Flashcard tab click handler
                 if (e.target.matches('.flashcard-tab')) {
                     const tab = e.target.dataset.tab;
                     document.querySelectorAll('.flashcard-tab').forEach(t => {
@@ -380,15 +665,16 @@
                     renderFlashcardTab(tab);
                 }
 
+                // Accordion header click handler (for Questions and Teacher's Lines)
                 if(e.target.closest('.accordion-header')) {
                     const header = e.target.closest('.accordion-header');
                     const content = header.nextElementSibling;
                     const icon = header.querySelector('span:last-child');
                     if(content.style.maxHeight) {
-                        content.style.maxHeight = null;
+                        content.style.maxHeight = null; // Collapse
                         icon.style.transform = 'rotate(0deg)';
                     } else {
-                        content.style.maxHeight = content.scrollHeight + 'px';
+                        content.style.maxHeight = content.scrollHeight + 'px'; // Expand
                         icon.style.transform = 'rotate(180deg)';
                     }
                 }
@@ -397,3 +683,4 @@
     </script>
 </body>
 </html>
+�
