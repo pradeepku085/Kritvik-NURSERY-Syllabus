@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Nursery Plan 🌸</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Playful Pastels -->
+    <!-- Application Structure Plan: A dashboard-style SPA with a main "Syllabus Explorer" and separate sections for "Rhymes", "Flashcards", "Question Bank", and "Tracker". This task-oriented design enhances usability by separating the core syllabus from supplementary resources. Users select a month to view its specific weekly plan, preventing information overload. A bar chart visually summarizes the new topics per subject for the selected month, offering a quick overview. This structure is more intuitive and engaging for teachers/parents than a long, static document. -->
+    <!-- Visualization & Content Choices: 
+    - Syllabus: Report's monthly/weekly data -> Goal: Organize/Compare -> Viz: Interactive Grid + Bar Chart -> Interaction: Month selection updates both grid and chart -> Justification: Breaks down a year-long plan into manageable monthly views. The chart provides an instant data-driven summary of monthly subject focus. -> Library: Chart.js for the bar chart, Vanilla JS for the grid.
+    - Rhymes: Report's rhyme list -> Goal: Inform -> Viz: Two-column card layout -> Interaction: N/A -> Justification: Simple, readable presentation.
+    - Flashcards: Report's flashcard topics -> Goal: Organize -> Viz: Tabbed interface -> Interaction: JS-powered tab switching -> Justification: Neatly categorizes related content without cluttering the UI.
+    - Questions: Report's question bank -> Goal: Inform -> Viz: Accordion UI -> Interaction: Click to expand/collapse categories -> Justification: Allows users to focus on specific topics for quick revision.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #FEFBF6; }
+        .nav-button { transition: all 0.3s ease; }
+        .nav-button.active { background-color: #A6D0DD; color: #333; font-weight: 600; }
+        .month-button.active { background-color: #7F5283; color: white; }
+        .subject-card { border-left-width: 4px; }
+        .english { border-color: #3B82F6; }
+        .maths { border-color: #10B981; }
+        .hindi { border-color: #F97316; }
+        .gk-evs { border-color: #8B5CF6; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin: 2rem auto; height: 300px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 350px; } }
+        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 max-w-7xl">
+
+        <header class="text-center mb-6">
+            <h1 class="text-4xl font-bold text-gray-800">Nursery Class Planner 🌸</h1>
+            <p class="text-lg text-gray-600">Saal Bhar Ka Plan - Aasaan Aur Interactive!</p>
+        </header>
+
+        <nav class="flex flex-wrap justify-center gap-2 sm:gap-4 mb-8">
+            <button data-view="syllabus" class="nav-button active py-2 px-4 rounded-full bg-white shadow-md hover:bg-gray-100">Syllabus Explorer 🗺️</button>
+            <button data-view="rhymes" class="nav-button py-2 px-4 rounded-full bg-white shadow-md hover:bg-gray-100">Rhymes Corner 🎶</button>
+            <button data-view="flashcards" class="nav-button py-2 px-4 rounded-full bg-white shadow-md hover:bg-gray-100">Flashcard Hub 🖼️</button>
+            <button data-view="questions" class="nav-button py-2 px-4 rounded-full bg-white shadow-md hover:bg-gray-100">Question Bank ❓</button>
+        </nav>
+
+        <main id="main-content">
+        </main>
+
+    </div>
+
+    <script>
+        const syllabusData = {
+            April: [
+                { week: 1, english: 'Capital A (Oral & Recog)', maths: '1-5 (Oral)', hindi: 'अ (Recog & Oral)', gk: 'Myself (Mera Naam)' },
+                { week: 2, english: 'Capital B (Oral & Recog)', maths: '1-5 (Oral)', hindi: 'आ (Recog & Oral)', gk: 'Body Parts (Head, Eyes)' },
+                { week: 3, english: 'Capital C (Oral & Recog)', maths: '1-5 (Oral)', hindi: 'इ (Recog & Oral)', gk: 'Body Parts (Ears, Mouth)' },
+                { week: 4, english: 'Capital D (Oral & Recog)', maths: '1-5 (Oral)', hindi: 'ई (Recog & Oral)', gk: 'Body Parts (Legs, Feet)' },
+            ],
+            May: [
+                { week: 1, english: 'Capital E (Oral & Recog)', maths: '1-10 (Oral)', hindi: 'उ (Recog & Oral)', gk: 'Fruits (Apple, Banana)' },
+                { week: 2, english: 'Capital F (Oral & Recog)', maths: '1-10 (Oral)', hindi: 'ऊ (Recog & Oral)', gk: 'Fruits (Mango, Grapes)' },
+                { week: 3, english: 'Capital G (Oral & Recog)', maths: '1-10 (Oral)', hindi: 'ऋ (Recog & Oral)', gk: 'Fruits (Orange)' },
+                { week: 4, english: 'Capital H (Oral & Recog)', maths: '1-10 (Oral)', hindi: 'ए (Recog & Oral)', gk: 'Revision: Fruits' },
+            ],
+            June: [
+                { week: 1, english: 'Capital I (Oral & Recog)', maths: '1-15 (Oral)', hindi: 'ऐ (Recog & Oral)', gk: 'Vegetables (Potato)' },
+                { week: 2, english: 'Capital J (Oral & Recog)', maths: '1-15 (Oral)', hindi: 'ओ (Recog & Oral)', gk: 'Vegetables (Tomato)' },
+                { week: 3, english: 'Capital K (Oral & Recog)', maths: '1-15 (Oral)', hindi: 'औ (Recog & Oral)', gk: 'Vegetables (Onion)' },
+                { week: 4, english: 'Capital L (Oral & Recog)', maths: '1-15 (Oral)', hindi: 'अं (Recog & Oral)', gk: 'Revision: Vegetables' },
+            ],
+            July: [
+                { week: 1, english: 'A-Z Recog', maths: '1-20 (Oral)', hindi: 'अ-अः (Recog)', gk: 'Domestic Animals' },
+                { week: 2, english: 'A, B (Writing)', maths: '1-5 (Writing)', hindi: 'अ, आ (Writing)', gk: 'Cow, Goat' },
+                { week: 3, english: 'C, D (Writing)', maths: '1-10 (Writing)', hindi: 'इ, ई (Writing)', gk: 'Wild Animals' },
+                { week: 4, english: 'E, F (Writing)', maths: 'Counting Objects (1-5)', hindi: 'उ, ऊ (Writing)', gk: 'Elephant, Monkey' },
+            ],
+            August: [
+                { week: 1, english: 'G, H (Writing)', maths: 'Big-Small Concept', hindi: 'ऋ, ए (Writing)', gk: 'Flowers (Rose, Lotus)' },
+                { week: 2, english: 'I, J (Writing)', maths: 'Tall-Short Concept', hindi: 'ऐ, ओ (Writing)', gk: 'Flowers (Sunflower)' },
+                { week: 3, english: 'K, L (Writing)', maths: 'More-Less Concept', hindi: 'औ, अं (Writing)', gk: 'Trees' },
+                { week: 4, english: 'M, N (Writing)', maths: 'Heavy-Light Concept', hindi: 'अः (Writing)', gk: 'Revision' },
+            ],
+            September: [
+                { week: 1, english: 'O, P (Writing)', maths: 'Up-Down Concept', hindi: 'Writing Practice', gk: 'Seasons (Summer, Winter)' },
+                { week: 2, english: 'Q, R (Writing)', maths: 'Full-Empty Concept', hindi: 'दो अक्षर के शब्द (Oral)', gk: 'Seasons (Rainy)' },
+                { week: 3, english: 'S, T (Writing)', maths: 'Shapes: Circle, Square', hindi: 'दो अक्षर के शब्द (Writing)', gk: 'Things from Plants' },
+                { week: 4, english: 'U, V (Writing)', maths: 'Shapes: Triangle', hindi: 'Writing Practice', gk: 'Revision' },
+            ],
+            October: [
+                { week: 1, english: 'W, X (Writing)', maths: '1-15 (Writing)', hindi: 'तीन अक्षर के शब्द (Oral)', gk: 'Magic Words (Please, Thank you)' },
+                { week: 2, english: 'Y, Z (Writing)', maths: 'Counting (1-10)', hindi: 'तीन अक्षर के शब्द (Writing)', gk: 'Magic Words (Sorry)' },
+                { week: 3, english: 'Small a, b (Recog)', maths: '1-50 (Oral)', hindi: 'छोटी कविता (Oral)', gk: 'Transport (Car, Bus)' },
+                { week: 4, english: 'Small c, d (Recog)', maths: '1-50 (Oral)', hindi: 'कविता (Oral)', gk: 'Transport (Train, Aeroplane)' },
+            ],
+            November: [
+                { week: 1, english: 'Small e, f (Recog)', maths: 'Writing Practice', hindi: 'Writing Practice', gk: 'Helpers (Doctor, Teacher)' },
+                { week: 2, english: 'Small g, h (Recog)', maths: 'Counting (1-15)', hindi: 'Writing Practice', gk: 'Helpers (Policeman)' },
+                { week: 3, english: 'Small i, j (Recog)', maths: '1-75 (Oral)', hindi: 'कविता (Action)', gk: 'Festivals (Diwali, Holi)' },
+                { week: 4, english: 'Small k, l (Recog)', maths: '1-75 (Oral)', hindi: 'कविता (Action)', gk: 'Festivals (Christmas, Eid)' },
+            ],
+            December: [
+                { week: 1, english: 'Small m, n (Recog)', maths: '1-20 (Writing)', hindi: 'चार अक्षर के शब्द (Oral)', gk: 'Good Habits (Brushing)' },
+                { week: 2, english: 'Small o, p (Recog)', maths: 'Counting (1-20)', hindi: 'चार अक्षर के शब्द (Writing)', gk: 'Good Habits (Bathing)' },
+                { week: 3, english: 'Small q, r (Recog)', maths: '1-100 (Oral)', hindi: 'कहानी (Simple)', gk: 'Good Habits (Sharing)' },
+                { week: 4, english: 'Small s, t (Recog)', maths: '1-100 (Oral)', hindi: 'कहानी (Simple)', gk: 'Revision' },
+            ],
+            January: [
+                { week: 1, english: 'Small u, v (Recog)', maths: 'Revision', hindi: 'Revision', gk: 'Revision (Myself, Fruits)' },
+                { week: 2, english: 'Small w, x (Recog)', maths: 'Revision', hindi: 'Revision', gk: 'Revision (Animals, Flowers)' },
+                { week: 3, english: 'Small y, z (Recog)', maths: 'Revision', hindi: 'Revision', gk: 'Revision (Seasons, Transport)' },
+                { week: 4, english: 'A-Z Capital (Revision)', maths: 'Revision', hindi: 'Revision', gk: 'Revision (All)' },
+            ],
+            February: [
+                { week: 1, english: 'Small a-z (Writing)', maths: 'Revision', hindi: 'Revision', gk: 'Revision (All)' },
+                { week: 2, english: 'Phonics (Revision)', maths: 'Revision', hindi: 'Revision', gk: 'Oral Tests' },
+                { week: 3, english: 'Rhymes (Revision)', maths: 'Revision', hindi: 'Revision', gk: 'Oral Tests' },
+                { week: 4, english: 'Vocabulary (Revision)', maths: 'Revision', hindi: 'Revision', gk: 'Oral Tests' },
+            ],
+            March: [
+                { week: 1, english: 'Full Syllabus Revision', maths: 'Full Syllabus Revision', hindi: 'Full Syllabus Revision', gk: 'Full Syllabus Revision' },
+                { week: 2, english: 'Oral Test Practice', maths: 'Oral Test Practice', hindi: 'Oral Test Practice', gk: 'Oral Test Practice' },
+                { week: 3, english: 'Writing Test Practice', maths: 'Writing Test Practice', hindi: 'Writing Test Practice', gk: 'Practical Test Practice' },
+                { week: 4, english: 'Fun Activities & Games!', maths: 'Fun Activities & Games!', hindi: 'Fun Activities & Games!', gk: 'Fun Activities & Games!' },
+            ],
+        };
+
+        const rhymesData = {
+            english: ["Twinkle Twinkle", "Baa Baa Black Sheep", "Johnny Johnny", "Humpty Dumpty", "Jack and Jill", "Rain Rain Go Away", "ABCD Song", "Head Shoulders Knees & Toes"],
+            hindi: ["Machhli Jal Ki Rani", "Aaloo Kachaloo Beta", "Chanda Mama Door Ke", "Nani Teri Morni", "Ek Mota Hathi", "Titli Udi", "Lal Tamatar", "Chuk Chuk Rail Gadi"]
+        };
+
+        const flashcardsData = {
+            phonics: ["A for Apple", "B for Ball", "C for Cat", "D for Dog", "E for Elephant", "F for Fish", "...aur bhi"],
+            colors: ["Red (Laal) ❤️", "Blue (Neela) 💙", "Yellow (Peela) 💛", "Green (Hara) 💚", "Orange (Narangi) 🧡", "Pink (Gulabi) 💖"],
+            gk: ["Fruits: Apple, Banana, Mango", "Vegetables: Potato, Tomato", "Animals: Dog, Cat, Lion", "Transport: Car, Bus, Train"]
+        };
+
+        const questionsData = {
+            'Myself & Body': ["Aapka naam kya hai?", "Aapki nose kahan hai? 👃", "Aapki kitni aankhein hain? 👀"],
+            'Fruits & Vegetables': ["Ye kaun sa fruit hai? 🍎", "Apple ka rang kya hai?", "Aapko kaun si sabzi pasand hai? 🥕"],
+            'Animals & Flowers': ["Dog kaise bolta hai? 🐶", "Lion kahan rehta hai? 🦁", "Rose ka rang kya hota hai? 🌹"],
+            'Magic Words': ["Kuch chahiye toh kya bolte ho? 🙏", "Galti ho jaye toh kya bolte ho?"]
+        };
+
+        let myChart;
+
+        function renderSyllabusView(month = 'April') {
+            const content = document.getElementById('main-content');
+            const months = Object.keys(syllabusData);
+            
+            let monthButtons = months.map(m => `
+                <button data-month="${m}" class="month-button text-sm sm:text-base py-2 px-4 rounded-full bg-white shadow-md hover:bg-gray-100 ${m === month ? 'active' : ''}">${m}</button>
+            `).join('');
+
+            content.innerHTML = `
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <div class="text-center mb-6">
+                        <h2 class="text-3xl font-bold text-gray-800">Syllabus Explorer</h2>
+                        <p class="text-gray-500">Mahina (Month) select karein aur week-wise plan dekhein.</p>
+                    </div>
+                    <div class="flex flex-wrap justify-center gap-2 mb-8">
+                        ${monthButtons}
+                    </div>
+                    
+                    <div id="chart-and-grid-container">
+                        <div class="chart-container">
+                            <canvas id="topicsChart"></canvas>
+                        </div>
+                        <div id="syllabus-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        </div>
+                    </div>
+                </div>
+            `;
+            renderSyllabusForMonth(month);
+        }
+
+        function renderSyllabusForMonth(month) {
+            const grid = document.getElementById('syllabus-grid');
+            if (!grid) return;
+            
+            const monthData = syllabusData[month];
+            grid.innerHTML = monthData.map(week => `
+                <div class="bg-gray-50 p-4 rounded-lg shadow">
+                    <h3 class="font-bold text-xl mb-3 text-center text-gray-700">Week ${week.week}</h3>
+                    <div class="space-y-3">
+                        <div class="subject-card english bg-blue-50 p-3 rounded"><strong>English 📖:</strong> ${week.english}</div>
+                        <div class="subject-card maths bg-green-50 p-3 rounded"><strong>Maths ➕:</strong> ${week.maths}</div>
+                        <div class="subject-card hindi bg-orange-50 p-3 rounded"><strong>Hindi ✍️:</strong> ${week.hindi}</div>
+                        <div class="subject-card gk-evs bg-purple-50 p-3 rounded"><strong>GK/EVS 🌱:</strong> ${week.gk}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            updateChart(month);
+        }
+
+        function updateChart(month) {
+            const ctx = document.getElementById('topicsChart');
+            if(!ctx) return;
+
+            const monthData = syllabusData[month];
+            const topicCounts = { english: 0, maths: 0, hindi: 0, gk: 0 };
+            
+            monthData.forEach(week => {
+                if(!week.english.toLowerCase().includes('revision')) topicCounts.english++;
+                if(!week.maths.toLowerCase().includes('revision')) topicCounts.maths++;
+                if(!week.hindi.toLowerCase().includes('revision')) topicCounts.hindi++;
+                if(!week.gk.toLowerCase().includes('revision')) topicCounts.gk++;
+            });
+
+            if (myChart) {
+                myChart.destroy();
+            }
+
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['English', 'Maths', 'Hindi', 'GK/EVS'],
+                    datasets: [{
+                        label: `Naye Topics in ${month}`,
+                        data: [topicCounts.english, topicCounts.maths, topicCounts.hindi, topicCounts.gk],
+                        backgroundColor: ['#60A5FA', '#34D399', '#F97316', '#A78BFA'],
+                        borderColor: ['#3B82F6', '#10B981', '#F97316', '#8B5CF6'],
+                        borderWidth: 1,
+                        borderRadius: 5,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: `Month Focus: Naye Topics ki Ginti`,
+                            font: {
+                                size: 16
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+
+        function renderRhymesView() {
+            const content = document.getElementById('main-content');
+            content.innerHTML = `
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <div class="text-center mb-6">
+                        <h2 class="text-3xl font-bold text-gray-800">Rhymes Corner 🎶</h2>
+                        <p class="text-gray-500">Chalo, milkar gaayein!</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h3 class="text-2xl font-semibold mb-4 text-center text-blue-600">English Rhymes</h3>
+                            <ul class="space-y-3">
+                                ${rhymesData.english.map(rhyme => `<li class="bg-blue-50 p-3 rounded-lg shadow-sm text-lg">✨ ${rhyme}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-semibold mb-4 text-center text-orange-600">Hindi Rhymes</h3>
+                            <ul class="space-y-3">
+                                ${rhymesData.hindi.map(rhyme => `<li class="bg-orange-50 p-3 rounded-lg shadow-sm text-lg">🐠 ${rhyme}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderFlashcardsView() {
+            const content = document.getElementById('main-content');
+            content.innerHTML = `
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <div class="text-center mb-6">
+                        <h2 class="text-3xl font-bold text-gray-800">Flashcard Hub 🖼️</h2>
+                        <p class="text-gray-500">Pictures se seekhna aasaan hai.</p>
+                    </div>
+                    <div class="flex justify-center border-b mb-4">
+                        <button data-tab="phonics" class="flashcard-tab py-2 px-4 text-lg font-medium border-b-2 border-purple-500 text-purple-600">Phonics</button>
+                        <button data-tab="colors" class="flashcard-tab py-2 px-4 text-lg font-medium text-gray-500 border-b-2 border-transparent">Colours</button>
+                        <button data-tab="gk" class="flashcard-tab py-2 px-4 text-lg font-medium text-gray-500 border-b-2 border-transparent">GK</button>
+                    </div>
+                    <div id="flashcard-content"></div>
+                </div>
+            `;
+            renderFlashcardTab('phonics');
+        }
+
+        function renderFlashcardTab(tab) {
+            const tabContent = document.getElementById('flashcard-content');
+            let dataList;
+            if(tab === 'phonics') dataList = flashcardsData.phonics;
+            else if (tab === 'colors') dataList = flashcardsData.colors;
+            else dataList = flashcardsData.gk;
+            tabContent.innerHTML = `<ul class="list-disc list-inside space-y-2 text-lg p-4">
+                ${dataList.map(item => `<li>${item}</li>`).join('')}
+            </ul>`;
+        }
+
+        function renderQuestionsView() {
+            const content = document.getElementById('main-content');
+            content.innerHTML = `
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <div class="text-center mb-6">
+                        <h2 class="text-3xl font-bold text-gray-800">Question Bank ❓</h2>
+                        <p class="text-gray-500">Roz poocho, roz seekho!</p>
+                    </div>
+                    <div class="space-y-4">
+                        ${Object.keys(questionsData).map(category => `
+                            <div>
+                                <button class="accordion-header w-full text-left text-xl font-semibold p-4 bg-gray-100 rounded-lg flex justify-between items-center hover:bg-gray-200">
+                                    <span>${category}</span>
+                                    <span class="transform transition-transform duration-300">▼</span>
+                                </button>
+                                <div class="accordion-content">
+                                    <ul class="list-disc list-inside space-y-2 p-4 bg-gray-50 rounded-b-lg">
+                                        ${questionsData[category].map(q => `<li class="text-lg">${q}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const mainContent = document.getElementById('main-content');
+            
+            renderSyllabusView();
+
+            document.querySelector('nav').addEventListener('click', (e) => {
+                if (e.target.matches('.nav-button')) {
+                    const view = e.target.dataset.view;
+                    
+                    document.querySelectorAll('.nav-button').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+
+                    if (view === 'syllabus') renderSyllabusView();
+                    else if (view === 'rhymes') renderRhymesView();
+                    else if (view === 'flashcards') renderFlashcardsView();
+                    else if (view === 'questions') renderQuestionsView();
+                }
+            });
+
+            mainContent.addEventListener('click', (e) => {
+                if (e.target.matches('.month-button')) {
+                    const month = e.target.dataset.month;
+                    document.querySelectorAll('.month-button').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    renderSyllabusForMonth(month);
+                }
+
+                if (e.target.matches('.flashcard-tab')) {
+                    const tab = e.target.dataset.tab;
+                    document.querySelectorAll('.flashcard-tab').forEach(t => {
+                        t.classList.remove('text-purple-600', 'border-purple-500');
+                        t.classList.add('text-gray-500', 'border-transparent');
+                    });
+                    e.target.classList.add('text-purple-600', 'border-purple-500');
+                    e.target.classList.remove('text-gray-500', 'border-transparent');
+                    renderFlashcardTab(tab);
+                }
+
+                if(e.target.closest('.accordion-header')) {
+                    const header = e.target.closest('.accordion-header');
+                    const content = header.nextElementSibling;
+                    const icon = header.querySelector('span:last-child');
+                    if(content.style.maxHeight) {
+                        content.style.maxHeight = null;
+                        icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        icon.style.transform = 'rotate(180deg)';
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
